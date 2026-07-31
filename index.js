@@ -3,12 +3,13 @@ const axios = require('axios');
 const app = express();
 app.use(express.json());
 
-// ==== Variables de entorno (configuradas en Render → Environment) ====
+// ==== Variables de entorno (configurar en Render → Environment) ====
 const VERIFY_TOKEN = process.env.VERIFY_TOKEN || "mi_token_secreto_123";
 const PAGE_ACCESS_TOKEN = process.env.PAGE_ACCESS_TOKEN;   // token de la página, para leer el lead
-const WHATSAPP_TOKEN = process.env.WHATSAPP_TOKEN;         // token para enviar WhatsApp
+const WHATSAPP_TOKEN = process.env.WHATSAPP_TOKEN;         // token del sistema/business para enviar WhatsApp
 const PHONE_NUMBER_ID = process.env.PHONE_NUMBER_ID;       // ID del número de WhatsApp Business
-const TEMPLATE_NAME = process.env.TEMPLATE_NAME || "nuevo_lead"; // nombre del template aprobado
+const TEMPLATE_NAME = process.env.TEMPLATE_NAME || "nuevo_prospect"; // nombre del template aprobado
+const CARD_IMAGE_URL = process.env.CARD_IMAGE_URL || "https://raw.githubusercontent.com/nakoweb-blip/mi-bot-meta/main/Yesica-Sturma.png";
 const GRAPH_VERSION = "v26.0";
 
 // === 1. Verificación del webhook (GET) ===
@@ -59,7 +60,7 @@ app.post('/webhook', async (req, res) => {
     telefono = telefono.replace(/[^\d]/g, '');
     if (!telefono.startsWith('54')) telefono = '54' + telefono;
 
-    // === 2b. Enviar WhatsApp vía Cloud API (usando template aprobado) ===
+    // === 2b. Enviar WhatsApp vía Cloud API (usando template aprobado, con imagen + parámetro con nombre) ===
     await axios.post(
       `https://graph.facebook.com/${GRAPH_VERSION}/${PHONE_NUMBER_ID}/messages`,
       {
@@ -71,8 +72,14 @@ app.post('/webhook', async (req, res) => {
           language: { code: 'es_AR' },
           components: [
             {
+              type: 'header',
+              parameters: [{ type: 'image', image: { link: CARD_IMAGE_URL } }]
+            },
+            {
               type: 'body',
-              parameters: [{ type: 'text', text: nombre || 'hola' }]
+              parameters: [
+                { type: 'text', parameter_name: 'customer_name', text: nombre || 'hola' }
+              ]
             }
           ]
         }
