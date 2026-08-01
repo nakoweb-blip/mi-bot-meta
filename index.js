@@ -8,8 +8,8 @@ const VERIFY_TOKEN = process.env.VERIFY_TOKEN || "mi_token_secreto_123";
 const PAGE_ACCESS_TOKEN = process.env.PAGE_ACCESS_TOKEN;   // token de la página, para leer el lead
 const WHATSAPP_TOKEN = process.env.WHATSAPP_TOKEN;         // token del sistema/business para enviar WhatsApp
 const PHONE_NUMBER_ID = process.env.PHONE_NUMBER_ID;       // ID del número de WhatsApp Business
-const TEMPLATE_NAME = process.env.TEMPLATE_NAME || "nuevo_prospect"; // nombre del template aprobado
-const CARD_IMAGE_URL = process.env.CARD_IMAGE_URL || "https://raw.githubusercontent.com/nakoweb-blip/mi-bot-meta/main/Yesica-Sturma.png";
+const TEMPLATE_NAME = process.env.TEMPLATE_NAME || "aviso_nuevo_lead"; // nombre del template aprobado
+const NOTIFICATION_PHONE = process.env.NOTIFICATION_PHONE || "5491130798961"; // número fijo que recibe el aviso (Yesica)
 const GRAPH_VERSION = "v26.0";
 
 // === 1. Verificación del webhook (GET) ===
@@ -48,37 +48,36 @@ app.post('/webhook', async (req, res) => {
       fieldData.find(f => f.name.toLowerCase() === name.toLowerCase())?.values?.[0] || '';
 
     // Ajustar estos nombres a como se llaman los campos reales en tu formulario
-    const nombre = getField('full_name') || getField('nombre_completo');
-    let telefono = getField('phone_number') || getField('telefono');
+    // (podés verlos con el GET de arriba en Graph API Explorer)
+    const nombre = getField('full_name') || getField('nombre_completo') || 'Sin nombre';
+    const telefono = getField('phone_number') || getField('telefono') || 'Sin teléfono';
+    const email = getField('email') || 'Sin email';
 
-    if (!telefono) {
-      console.log('Lead sin teléfono, no se puede enviar WhatsApp:', fieldData);
-      return;
-    }
+    // Hora del lead en formato Argentina (hh:mm)
+    const hora = new Date().toLocaleTimeString('es-AR', {
+      timeZone: 'America/Argentina/Buenos_Aires',
+      hour: '2-digit',
+      minute: '2-digit'
+    });
 
-    // Normalizar el número (quitar espacios/guiones, agregar código de país si falta)
-    telefono = telefono.replace(/[^\d]/g, '');
-    if (!telefono.startsWith('54')) telefono = '54' + telefono;
-
-    // === 2b. Enviar WhatsApp vía Cloud API (usando template aprobado, con imagen + parámetro con nombre) ===
+    // === 2b. Enviar el AVISO INTERNO por WhatsApp a Yesica (no al lead) ===
     await axios.post(
       `https://graph.facebook.com/${GRAPH_VERSION}/${PHONE_NUMBER_ID}/messages`,
       {
         messaging_product: 'whatsapp',
-        to: telefono,
+        to: NOTIFICATION_PHONE,
         type: 'template',
         template: {
           name: TEMPLATE_NAME,
           language: { code: 'es_AR' },
           components: [
             {
-              type: 'header',
-              parameters: [{ type: 'image', image: { link: CARD_IMAGE_URL } }]
-            },
-            {
               type: 'body',
               parameters: [
-                { type: 'text', parameter_name: 'customer_name', text: nombre || 'hola' }
+                { type: 'text', text: hora },
+                { type: 'text', text: nombre },
+                { type: 'text', text: telefono },
+                { type: 'text', text: email }
               ]
             }
           ]
@@ -87,7 +86,7 @@ app.post('/webhook', async (req, res) => {
       { headers: { Authorization: `Bearer ${WHATSAPP_TOKEN}` } }
     );
 
-    console.log(`WhatsApp enviado a ${telefono} (${nombre})`);
+    console.log(`Aviso enviado a Yesica sobre el lead: ${nombre} (${telefono})`);
   } catch (err) {
     console.error('Error procesando el lead:', err.response?.data || err.message);
   }
