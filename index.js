@@ -49,9 +49,9 @@ app.post('/webhook', async (req, res) => {
 
     // Ajustar estos nombres a como se llaman los campos reales en tu formulario
     // (podés verlos con el GET de arriba en Graph API Explorer)
-    const nombre = getField('full_name') || getField('nombre_completo') || 'Sin nombre';
-    const telefono = getField('phone_number') || getField('telefono') || 'Sin teléfono';
-    const email = getField('email') || 'Sin email';
+    const nombre = getField('nombre_y_apellidos') || getField('full_name') || 'Sin nombre';
+    const telefono = getField('número_de_teléfono') || getField('phone_number') || 'Sin teléfono';
+    const email = getField('correo_electrónico') || getField('email') || 'Sin email';
 
     // Hora del lead en formato Argentina (hh:mm)
     const hora = new Date().toLocaleTimeString('es-AR', {
